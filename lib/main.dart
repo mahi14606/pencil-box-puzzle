@@ -38,6 +38,8 @@ class _TiltGameState extends State<TiltGame>
 
   double ballRestitution = -0.5;
 
+  List<Rect> mazeWalls = [];
+
   StreamSubscription? subscription;
 
   @override
@@ -50,9 +52,40 @@ class _TiltGameState extends State<TiltGame>
         xVelocity = xVelocity - (tiltX * sensitivity);
         yVelocity = yVelocity + (tiltY * sensitivity);
 
-        xPosition = xPosition + xVelocity;
-        yPosition = yPosition + yVelocity;
+        /* xPosition = xPosition + xVelocity;
+        yPosition = yPosition + yVelocity; */
+        double proposedX = xPosition + xVelocity;         
+        double proposedY = yPosition + yVelocity;   // Proposed new positions
+        
+        Rect ballRectx = Rect.fromLTWH(proposedX, yPosition, ballSize, ballSize);     // Check horizontal movement
+        Rect ballRecty = Rect.fromLTWH(xPosition, proposedY, ballSize, ballSize);   // Check vertical movement
+        bool hitWallX = false;
+        bool hitWallY = false;
 
+        for (var wall in mazeWalls) {         // Check collisions with walls
+          if (ballRectx.overlaps(wall)) {
+            hitWallX = true;
+            break;                            // No need to check further if a collision is detected
+          }
+          if (ballRecty.overlaps(wall)) {
+            hitWallY = true;
+            break;
+          }
+        }
+
+        if (!hitWallX) {
+          xPosition = proposedX;        // Update position if no collision
+        } else {
+          xVelocity = xVelocity * ballRestitution;      // Reverse velocity on collision
+        }
+
+        if (!hitWallY) {
+          yPosition = proposedY;
+        } else {
+          yVelocity = yVelocity * ballRestitution;
+        }
+        
+        // Apply friction
         xVelocity = xVelocity * friction; // Friction
         yVelocity = yVelocity * friction; // Friction
 
@@ -135,11 +168,40 @@ class _TiltGameState extends State<TiltGame>
     screenHeight = MediaQuery.of(context).size.height;
     screenWidth = MediaQuery.of(context).size.width;
 
+    mazeWalls = [
+      Rect.fromLTWH(0, 0.3 * screenHeight!, screenWidth! * 0.6, 20),
+      Rect.fromLTWH(0.4 * screenWidth!, 0.6 * screenHeight!, 20, 0.5 * screenHeight!),
+     /*  Rect.fromLTWH(100, 100, 200, 20),
+      Rect.fromLTWH(150, 200, 20, 200), */
+    ];
+
     return Scaffold(
       backgroundColor: Colors.blueGrey,
       body: Stack(
         children: [
-          Positioned(
+          for (var wall in mazeWalls)       // Draw maze walls
+            Positioned(
+              left: wall.left,
+              top: wall.top,
+              width: wall.width,
+              height: wall.height,
+              child: Container(  
+                decoration: BoxDecoration(                
+                  color: Colors.white.withAlpha(51),                 // Color.fromRGBO(112, 194, 188, 1),
+                  borderRadius: BorderRadius.circular(5),
+                  //border: Border.all(color: Colors.white.withOpacity(0.4), width: 2) ,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(38),
+                      //spreadRadius: 2,
+                      blurRadius: 3,
+                      offset: const Offset(3, 3), // changes position of shadow
+                    ),
+                  ],)
+              ),
+            ),
+
+          Positioned(             // Draw ball
             // left: MediaQuery.of(context).size.width / 2 - xPosition * sensitivity - ballSize / 2,
             // top: MediaQuery.of(context).size.height / 2 + yPosition * sensitivity - ballSize / 2,
             left: xPosition,
